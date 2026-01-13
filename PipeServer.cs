@@ -29,6 +29,8 @@ namespace SharpBlock
             this.MaxThread = MaxThread;
             ServerGroup = new NamedPipeServerStream[MaxThread];
             this.PipeName = PipeName;
+            RuningThreadID = 0;
+            SectionCount = 0;
         }
 
         public void DisposePipe()
@@ -37,15 +39,16 @@ namespace SharpBlock
             {
                 foreach (NamedPipeServerStream item in ServerGroup)
                 {
-                    try
+                    if (item != null)
                     {
-                        item.Dispose();
+                        try
+                        {
+                            if (item.IsConnected) item.Disconnect();
+                            item.Close();
+                            item.Dispose();
+                        }
+                        catch { }
                     }
-                    catch (NullReferenceException e)
-                    {
-
-                    }
-
                 }
             }
         }

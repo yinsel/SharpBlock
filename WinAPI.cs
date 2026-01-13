@@ -510,7 +510,9 @@ namespace SharpBlock {
         public static extern bool Wow64SetThreadContext(IntPtr hThread, IntPtr lpContext);
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
-        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Ansi)]
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern int GetCurrentProcessId();
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Ansi)]
         public static extern IntPtr LoadLibrary([MarshalAs(UnmanagedType.LPStr)] string lpFileName);
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern IntPtr OpenThread(ThreadAccess dwDesiredAccess, bool bInheritHandle, uint dwThreadId);

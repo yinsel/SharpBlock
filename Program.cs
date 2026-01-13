@@ -20,7 +20,8 @@ using BOFNET;
 
 namespace SharpBlock {
 
-    class Program: BeaconObject {
+    class Program : BeaconObject
+    {
 
         static IntPtr CurrentProcess = (IntPtr)(-1);
 
@@ -763,7 +764,7 @@ namespace SharpBlock {
             bool patchedArgs = false;
             bool kernelBaseLoaded = false;
             bool showWindow = false;
-            int ppid = -1;
+            int ppid = WinAPI.GetCurrentProcessId();
             HostProcessInfo hpi = new HostProcessInfo();
             
             MyBeaconConsole.WriteLine(
