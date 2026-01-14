@@ -655,6 +655,8 @@ namespace SharpBlock {
             MyBeaconConsole.WriteLine($"[+] Existing base: 0x{hpi.previousLoadAddress.ToInt64():x16}");
             MyBeaconConsole.WriteLine($"[+] New base: 0x{remoteImage.ToInt64():x16}");
 
+            MyBeaconConsole.WriteLine($"========================== PE Output Start ==========================");
+
             //Set RCX to the updated entry point of our new in memory PE
             SetEntryPoint(ctx, entryPoint);
             ctx.SetContext(hThread);
@@ -986,9 +988,9 @@ namespace SharpBlock {
                                 }
 
                                 if (ExceptionDebugInfo.dwFirstChance == 0 && ExceptionDebugInfo.ExceptionRecord.ExceptionCode != WinAPI.EXCEPTION_SINGLE_STEP) {
-                                    MyBeaconConsole.WriteLine($"Exception 0x{ExceptionDebugInfo.ExceptionRecord.ExceptionCode:x} occured at 0x{ExceptionDebugInfo.ExceptionRecord.ExceptionAddress.ToInt64():x}");
+                                    //MyBeaconConsole.WriteLine($"Exception 0x{ExceptionDebugInfo.ExceptionRecord.ExceptionCode:x} occured at 0x{ExceptionDebugInfo.ExceptionRecord.ExceptionAddress.ToInt64():x}");
                                     for(int idx=0; idx< ExceptionDebugInfo.ExceptionRecord.NumberParameters; ++idx ) {
-                                        MyBeaconConsole.WriteLine($"\tParameter: 0x{ExceptionDebugInfo.ExceptionRecord.ExceptionInformation[idx]}");
+                                        //MyBeaconConsole.WriteLine($"\tParameter: 0x{ExceptionDebugInfo.ExceptionRecord.ExceptionInformation[idx]}");
                                     }                                 
                                 }
 
@@ -1002,6 +1004,8 @@ namespace SharpBlock {
                     if (debugEventPtr != null)
                         Marshal.FreeHGlobal(debugEventPtr);
                 }
+
+                MyBeaconConsole.WriteLine($"========================== PE Output End ==========================");
 
                 int exitCode;
                 WinAPI.GetExitCodeProcess(pi.hProcess, out exitCode);                
