@@ -99,7 +99,7 @@ namespace SharpBlock
                 {
                     lock (_locker)
                     {
-                        SharpBlock.Program.MyBeaconConsole.WriteLine($"[+] PipeStream {SectionCount} {sResult.Length} {sResult[0]}");
+                        SharpBlock.Program.WriteLine($"[+] PipeStream {SectionCount} {sResult.Length} {sResult[0]}");
                         this.PipeContentStream.Append(sResult);
                         SectionCount++;
                     }

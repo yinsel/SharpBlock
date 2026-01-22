@@ -45,8 +45,20 @@ namespace SharpBlock {
 
         public Program(BeaconApi api) : base(api)
         {
+
         }
 
+        public static void WriteLine(string format, params object[] args)
+        {
+            if (MyBeaconConsole != null)
+            {
+                MyBeaconConsole.WriteLine(format, args);
+            }
+            else
+            {
+                Console.WriteLine(format, args);
+            }
+        }
 
         static D GetDelagateForSysCall<D>(IntPtr syscallStub) where D : Delegate {
             return (D)Marshal.GetDelegateForFunctionPointer(syscallStub, typeof(D));
@@ -98,7 +110,7 @@ namespace SharpBlock {
                 if (dllVersionInfo.LegalCopyright != null && blockCopyright.Contains(dllVersionInfo.LegalCopyright))
                     return true;
             }catch(Exception e) {
-                MyBeaconConsole.WriteLine($"[=] Failed to get file info for DLL {dllPath}, ignoring");
+                Program.WriteLine($"[=] Failed to get file info for DLL {dllPath}, ignoring");
             }
 
             return false;
@@ -228,17 +240,17 @@ namespace SharpBlock {
                 Tuple<long, long> addressRange = new Tuple<long, long>((long)imageBase, (long)imageBase + sizeOfImage);
                 blockAddressRanges.Add(addressRange);
 
-                MyBeaconConsole.WriteLine($"[+] Blocked DLL {dllPath}");
+                Program.WriteLine($"[+] Blocked DLL {dllPath}");
 
                 byte[] retIns = new byte[1] { 0xC3 };
                 uint bytesWritten;
 
-                MyBeaconConsole.WriteLine("[+] Patching DLL Entry Point at 0x{0:x}", entryPoint.ToInt64());
+                Program.WriteLine("[+] Patching DLL Entry Point at 0x{0:x}", entryPoint.ToInt64());
 
                 if (WriteProcessMemory(hProcess, entryPoint, retIns, 1, out bytesWritten)) {
-                    MyBeaconConsole.WriteLine("[+] Successfully patched DLL Entry Point");
+                    Program.WriteLine("[+] Successfully patched DLL Entry Point");
                 } else {
-                    MyBeaconConsole.WriteLine("[!] Failed patched DLL Entry Point with error 0x{0:x}", Marshal.GetLastWin32Error());
+                    Program.WriteLine("[!] Failed patched DLL Entry Point with error 0x{0:x}", Marshal.GetLastWin32Error());
                 }
             }
 
@@ -308,7 +320,7 @@ namespace SharpBlock {
             IntPtr commandLineArgsAPtr = ReadMovAddress(hProcess, WinAPI.GetProcAddress(kernel32Base, "GetCommandLineA"));
 
             if(commandLineArgsAPtr == IntPtr.Zero || commandLineArgsAPtr == IntPtr.Zero) {
-                MyBeaconConsole.WriteLine("[-] Failed to updated GetCommandLine pointers, unexpected instruction present");
+                Program.WriteLine("[-] Failed to updated GetCommandLine pointers, unexpected instruction present");
                 return;
             }
 
@@ -316,7 +328,7 @@ namespace SharpBlock {
 
             WritePointer(hProcess, commandLineArgsWPtr, argsStartPtr);
             WritePointer(hProcess, commandLineArgsAPtr, new IntPtr(argsStartPtr.ToInt64() + args.Length * 2 + 2));
-            MyBeaconConsole.WriteLine($"[+] Updated command line args with {args}");
+            Program.WriteLine($"[+] Updated command line args with {args}");
         }
 
         static void DisableAMSI(IntPtr hThread, IntPtr hProcess) {
@@ -410,7 +422,7 @@ namespace SharpBlock {
 
             //If allocated remote image base doesn't match PE header, process relocation table
             if (pRemoteImage != new IntPtr((long)(PEINFO.Is32Bit ? PEINFO.OptHeader32.ImageBase : PEINFO.OptHeader64.ImageBase))) {
-                MyBeaconConsole.WriteLine($"[=] Could not map process to preferred image base 0x{ (PEINFO.Is32Bit ? PEINFO.OptHeader32.ImageBase : PEINFO.OptHeader64.ImageBase):x}, relocating to 0x{pRemoteImage.ToInt64():x}");
+                Program.WriteLine($"[=] Could not map process to preferred image base 0x{ (PEINFO.Is32Bit ? PEINFO.OptHeader32.ImageBase : PEINFO.OptHeader64.ImageBase):x}, relocating to 0x{pRemoteImage.ToInt64():x}");
                 Map.RelocateModule(PEINFO, pImage, pRemoteImage);
             }
             uint status = Execute.DynamicInvoke.Native.NtWriteVirtualMemory(hProcess, pRemoteImage, pImage, (uint)RegionSize.ToInt32());
@@ -443,7 +455,7 @@ namespace SharpBlock {
             MemoryStream processDataStream = new MemoryStream();
 
             PipeName = path.Substring(9);
-            MyBeaconConsole.WriteLine($"[+] Waiting for process data from pipe {PipeName}");
+            Program.WriteLine($"[+] Waiting for process data from pipe {PipeName}");
 
             PipeServer ps = new PipeServer(5, PipeName);
             ps.StartServers();
@@ -457,7 +469,7 @@ namespace SharpBlock {
                 PipeContentStream.Length
             );
             byte[] bytes = processDataStream.ToArray();
-            MyBeaconConsole.WriteLine($"[+] Loaded PE Size: {bytes.Length}");
+            Program.WriteLine($"[+] Loaded PE Size: {bytes.Length}");
             return bytes;
         }
 
@@ -549,7 +561,7 @@ namespace SharpBlock {
         static void HideHollowedProcess(IntPtr hProcess, HostProcessInfo hpi) {
 
             if(IntPtr.Size == 4) {
-                MyBeaconConsole.WriteLine("[=] Hide allow process not available on x86 yet, use --disable-header-patch to supress this warning");
+                Program.WriteLine("[=] Hide allow process not available on x86 yet, use --disable-header-patch to supress this warning");
                 return;
             }
 
@@ -649,13 +661,13 @@ namespace SharpBlock {
             hpi.previousLoadAddress = GetPreviousLoadAddress(hProcess, peb);
 
 
-            MyBeaconConsole.WriteLine($"[+] PEB Address: 0x{peb:x16}");
-            MyBeaconConsole.WriteLine($"[+] Existing entry point: 0x{hpi.previousEntryPoint.ToInt64():x16}");
-            MyBeaconConsole.WriteLine($"[+] New entry point: 0x{entryPoint.ToInt64():x16}");
-            MyBeaconConsole.WriteLine($"[+] Existing base: 0x{hpi.previousLoadAddress.ToInt64():x16}");
-            MyBeaconConsole.WriteLine($"[+] New base: 0x{remoteImage.ToInt64():x16}");
+            Program.WriteLine($"[+] PEB Address: 0x{peb:x16}");
+            Program.WriteLine($"[+] Existing entry point: 0x{hpi.previousEntryPoint.ToInt64():x16}");
+            Program.WriteLine($"[+] New entry point: 0x{entryPoint.ToInt64():x16}");
+            Program.WriteLine($"[+] Existing base: 0x{hpi.previousLoadAddress.ToInt64():x16}");
+            Program.WriteLine($"[+] New base: 0x{remoteImage.ToInt64():x16}");
 
-            MyBeaconConsole.WriteLine($"========================== PE Output Start ==========================");
+            Program.WriteLine($"========================== PE Output Start ==========================");
 
             //Set RCX to the updated entry point of our new in memory PE
             SetEntryPoint(ctx, entryPoint);
@@ -737,7 +749,7 @@ namespace SharpBlock {
             long protection = ctx.GetParameter(3, hProcess);
 
             if (protection == 0x40 && IsInBlockedRange(returnAddress)) {
-                MyBeaconConsole.WriteLine("[+] Attempt to change memory to RWX from blocked DLL denied");
+                Program.WriteLine("[+] Attempt to change memory to RWX from blocked DLL denied");
                 OverrideReturnValue(hThread, hProcess, new UIntPtr(0xC0000022), 5);               
             }                
         }
@@ -747,7 +759,7 @@ namespace SharpBlock {
             try {
                 string line;
                 while ((line = sr.ReadLine()) != null) {
-                    MyBeaconConsole.WriteLine(line);
+                    Program.WriteLine(line);
                 }
             } catch (Exception) { }
         }
@@ -769,7 +781,7 @@ namespace SharpBlock {
             int ppid = WinAPI.GetCurrentProcessId();
             HostProcessInfo hpi = new HostProcessInfo();
             
-            MyBeaconConsole.WriteLine(
+            Program.WriteLine(
                  "SharpBlock by @_EthicalChaos_\n" +
                  $"  DLL Blocking app for child processes { (IntPtr.Size == 8 ? "x86_64" : "x86")} \n"
                 );
@@ -801,7 +813,7 @@ namespace SharpBlock {
                 }
 
             } catch (Exception e) {
-                MyBeaconConsole.WriteLine("[!] Failed to parse arguments: {0}", e.Message);
+                Program.WriteLine("[!] Failed to parse arguments: {0}", e.Message);
                 option_set.WriteOptionDescriptions(Console.Out);
                 return;
             }
@@ -820,8 +832,8 @@ namespace SharpBlock {
                 IntPtr etwEventWritePtr = WinAPI.GetProcAddress(ntdllBase, "EtwEventWrite");
                 IntPtr ntProtectVirtualMemoryPtr = WinAPI.GetProcAddress(ntdllBase, "NtProtectVirtualMemory");
 
-                MyBeaconConsole.WriteLine($"[+] in-proc amsi 0x{amsiBase.ToInt64():x16}");
-                MyBeaconConsole.WriteLine($"[+] in-proc ntdll 0x{ntdllBase.ToInt64():x16}");
+                Program.WriteLine($"[+] in-proc amsi 0x{amsiBase.ToInt64():x16}");
+                Program.WriteLine($"[+] in-proc ntdll 0x{ntdllBase.ToInt64():x16}");
 
                 STARTUPINFOEX startupInfo = new STARTUPINFOEX();
                 startupInfo.StartupInfo.cb = (uint)Marshal.SizeOf(startupInfo);
@@ -847,11 +859,11 @@ namespace SharpBlock {
 
                 if (!CreateProcess(hostProcess != null ? hostProcess : program, launchedArgs, IntPtr.Zero, IntPtr.Zero, true, launchFlags, IntPtr.Zero, null,
                     ref startupInfo, out pi)) {
-                    MyBeaconConsole.WriteLine($"[!] Failed to create process { (hostProcess != null ? hostProcess : program) } with error {Marshal.GetLastWin32Error()}");
+                    Program.WriteLine($"[!] Failed to create process { (hostProcess != null ? hostProcess : program) } with error {Marshal.GetLastWin32Error()}");
                     return;
                 }
 
-                MyBeaconConsole.WriteLine($"[+] Launched process { (hostProcess != null ? hostProcess : program)} with PID {pi.dwProcessId}");               
+                Program.WriteLine($"[+] Launched process { (hostProcess != null ? hostProcess : program)} with PID {pi.dwProcessId}");               
                 bool bContinueDebugging = true;
                 Dictionary<uint, IntPtr> processHandles = new Dictionary<uint, IntPtr>();
                 Dictionary<uint, IntPtr> threadHandles = new Dictionary<uint, IntPtr>();
@@ -870,7 +882,7 @@ namespace SharpBlock {
                                 IntPtr bytesRead;
                                 byte[] strData = new byte[OutputDebugStringEventInfo.nDebugStringLength];
                                 WinAPI.ReadProcessMemory(pi.hProcess, OutputDebugStringEventInfo.lpDebugStringData, strData, strData.Length, out bytesRead);
-                                MyBeaconConsole.WriteLine(Encoding.ASCII.GetString(strData));
+                                Program.WriteLine(Encoding.ASCII.GetString(strData));
                                 break;
                             */                           
 
@@ -912,7 +924,7 @@ namespace SharpBlock {
                                 WinAPI.LOAD_DLL_DEBUG_INFO LoadDLLDebugInfo = GetStructureFromByteArray<WinAPI.LOAD_DLL_DEBUG_INFO>(DebugEvent.u);
                                 string dllPath = PatchEntryPointIfNeeded(LoadDLLDebugInfo.hFile, LoadDLLDebugInfo.lpBaseOfDll, processHandles[DebugEvent.dwProcessId]);
 
-                                //MyBeaconConsole.WriteLine($"[=] DLL Load: {dllPath}");
+                                //Program.WriteLine($"[=] DLL Load: {dllPath}");
 
                                 if (DebugEvent.dwProcessId == pi.dwProcessId) {
 
@@ -923,7 +935,7 @@ namespace SharpBlock {
                                     }
 
                                     if (hostProcess != null && dllPath.EndsWith("ntdll.dll", StringComparison.OrdinalIgnoreCase)) {
-                                        MyBeaconConsole.WriteLine($"[+] Replacing host process with {program}");
+                                        Program.WriteLine($"[+] Replacing host process with {program}");
                                         hpi = ReplaceExecutable(processHandles[DebugEvent.dwProcessId], threadHandles[DebugEvent.dwThreadId], program);
 
                                         //Set a breakpoint on EtwEventWrite ready for us to bypass
@@ -988,9 +1000,9 @@ namespace SharpBlock {
                                 }
 
                                 if (ExceptionDebugInfo.dwFirstChance == 0 && ExceptionDebugInfo.ExceptionRecord.ExceptionCode != WinAPI.EXCEPTION_SINGLE_STEP) {
-                                    //MyBeaconConsole.WriteLine($"Exception 0x{ExceptionDebugInfo.ExceptionRecord.ExceptionCode:x} occured at 0x{ExceptionDebugInfo.ExceptionRecord.ExceptionAddress.ToInt64():x}");
+                                    //Program.WriteLine($"Exception 0x{ExceptionDebugInfo.ExceptionRecord.ExceptionCode:x} occured at 0x{ExceptionDebugInfo.ExceptionRecord.ExceptionAddress.ToInt64():x}");
                                     for(int idx=0; idx< ExceptionDebugInfo.ExceptionRecord.NumberParameters; ++idx ) {
-                                        //MyBeaconConsole.WriteLine($"\tParameter: 0x{ExceptionDebugInfo.ExceptionRecord.ExceptionInformation[idx]}");
+                                        //Program.WriteLine($"\tParameter: 0x{ExceptionDebugInfo.ExceptionRecord.ExceptionInformation[idx]}");
                                     }                                 
                                 }
 
@@ -1005,11 +1017,11 @@ namespace SharpBlock {
                         Marshal.FreeHGlobal(debugEventPtr);
                 }
 
-                MyBeaconConsole.WriteLine($"========================== PE Output End ==========================");
+                Program.WriteLine($"========================== PE Output End ==========================");
 
                 int exitCode;
                 WinAPI.GetExitCodeProcess(pi.hProcess, out exitCode);                
-                MyBeaconConsole.WriteLine($"[+] Process {program} with PID {pi.dwProcessId} exited wit code {exitCode:x}");
+                Program.WriteLine($"[+] Process {program} with PID {pi.dwProcessId} exited wit code {exitCode:x}");
                 
                 if (stdOutReaderThread.IsAlive) {
                     stdOutReader.Close();
@@ -1019,8 +1031,8 @@ namespace SharpBlock {
                 }
                    
             }catch(Exception e) {
-                MyBeaconConsole.WriteLine($"[!] SharpBlock failed with error {e.Message}");
-                MyBeaconConsole.WriteLine(e.StackTrace);
+                Program.WriteLine($"[!] SharpBlock failed with error {e.Message}");
+                Program.WriteLine(e.StackTrace);
             }
         }
     }
