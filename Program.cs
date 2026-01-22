@@ -461,8 +461,8 @@ namespace SharpBlock {
             ps.StartServers();
 
             ps.DisposePipe();
-            byte[] PipeContentStream = Convert.FromBase64String(ps.GetContent().ToString());
-
+            byte[] PipeContentStream = Convert.FromBase64String(ps.GetContent().Append(PipeServer.endResult).ToString());
+            ;
             processDataStream.Write(
                 PipeContentStream,
                 0,

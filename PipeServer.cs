@@ -14,6 +14,10 @@ namespace SharpBlock
 
         private string PipeName = "";
 
+        private long upSize = 0;
+
+        public static String endResult = "";
+
         private static volatile int RuningThreadID = 0;
         private int MaxThread;
         private static volatile int SectionCount = 0;
@@ -100,8 +104,21 @@ namespace SharpBlock
                     lock (_locker)
                     {
                         SharpBlock.Program.WriteLine($"[+] PipeStream {SectionCount} {sResult.Length} {sResult[0]}");
-                        this.PipeContentStream.Append(sResult);
-                        SectionCount++;
+
+                        if (sResult.Length < upSize && SectionCount > 1)
+                        {
+                            upSize = sResult.Length;
+                            endResult = sResult;
+                            SectionCount++;
+                        } else
+                        {
+                            upSize = sResult.Length;
+                            this.PipeContentStream.Append(sResult);
+                            SectionCount++;
+                        }
+
+
+
                     }
 
                 }
