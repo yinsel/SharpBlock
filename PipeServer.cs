@@ -18,9 +18,13 @@ namespace SharpBlock
 
         public static String endResult = "";
 
+        public static String startResult = "";
+
+        public static String secondReulst = "";
+
         private static volatile int RuningThreadID = 0;
         private int MaxThread;
-        private static volatile int SectionCount = 0;
+        public static volatile int SectionCount = 0;
 
         private static NamedPipeServerStream[] ServerGroup;
 
@@ -112,12 +116,20 @@ namespace SharpBlock
                             SectionCount++;
                         } else
                         {
-                            upSize = sResult.Length;
-                            this.PipeContentStream.Append(sResult);
+                            if (SectionCount == 0)
+                            {
+                                startResult = sResult;
+                            } else if (SectionCount == 1)
+                            {
+                                secondReulst = sResult;
+                            } else
+                            {
+                                upSize = sResult.Length;
+                                this.PipeContentStream.Append(sResult);
+                            }
                             SectionCount++;
+
                         }
-
-
 
                     }
 
