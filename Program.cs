@@ -100,6 +100,7 @@ namespace SharpBlock {
                 {
                     BeaconConsole.WriteLine($"[*] File {key} is not found");
                 }
+                return;
             }
 
             Main(args);
