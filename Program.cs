@@ -27,6 +27,8 @@ namespace SharpBlock {
     {
         private static Dictionary<string, MemoryStream> FileItems = new Dictionary<string, MemoryStream>();
 
+        private static Dictionary<string, bool> FileFlags = new Dictionary<string, bool>();
+
         static IntPtr CurrentProcess = (IntPtr)(-1);
 
         static public TextWriter MyBeaconConsole = null;
@@ -48,23 +50,20 @@ namespace SharpBlock {
             string text = (string)unpack.Values[0];
             int num = (int)unpack.Values[1];
             byte[] array = (byte[])unpack.Values[2];
-            MemoryStream memoryStream;
+            MemoryStream memoryStream = null;
             if (!FileItems.ContainsKey(text))
             {
                 BeaconConsole.WriteLine("[+] Get Files unique id " + text);
                 memoryStream = new MemoryStream();
                 FileItems[text] = memoryStream;
+            } else {
+                memoryStream = FileItems[text];
             }
-            else
-            {
-                BeaconConsole.WriteLine($"[+] File {text} already exists");
-                return;
-            }
-
             memoryStream.Write(array, 0, array.Length);
             if (array.Length < num)
             {
-                BeaconConsole.WriteLine($"[+] Load {text} to SharpBlock Memory");
+                FileFlags[text] = true;
+                BeaconConsole.WriteLine($"[+] Load {text} to SharpBlock Memory (size: {memoryStream.Length})");
             }
         }
 
@@ -95,6 +94,8 @@ namespace SharpBlock {
                 {
                     ms?.Dispose();
                     ms = null;
+                    FileItems.Remove(key);
+                    FileFlags.Remove(key);
                     BeaconConsole.WriteLine($"[*] File {key} is removed");
                 } else
                 {
